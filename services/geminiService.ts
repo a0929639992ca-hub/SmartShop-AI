@@ -1,9 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { ProductAnalysisResult } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const searchProduct = async (query: string, imageBase64?: string): Promise<ProductAnalysisResult> => {
+  // Initialize client inside the function to prevent app crash on startup if API Key is missing
+  // This allows the UI to render even if the key is not yet configured.
+  if (!process.env.API_KEY) {
+    throw new Error("API Key 尚未設定。請確認環境變數 API_KEY 是否正確。");
+  }
+  
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   try {
     const model = 'gemini-3-flash-preview';
     
@@ -73,6 +79,9 @@ export const searchProduct = async (query: string, imageBase64?: string): Promis
 
   } catch (error) {
     console.error("Gemini API Error:", error);
+    if (error instanceof Error && error.message.includes("API Key")) {
+        throw error;
+    }
     throw new Error("無法獲取產品數據，請稍後再試。");
   }
 };
