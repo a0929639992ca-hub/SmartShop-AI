@@ -2,17 +2,22 @@ import { GoogleGenAI } from "@google/genai";
 import { ProductAnalysisResult } from '../types';
 
 export const searchProduct = async (query: string, imageBase64?: string): Promise<ProductAnalysisResult> => {
-  // Initialize client inside the function to prevent app crash on startup if API Key is missing
-  // This allows the UI to render even if the key is not yet configured.
-  if (!process.env.API_KEY) {
-    throw new Error("API Key 尚未設定。請確認環境變數 API_KEY 是否正確。");
+  // Use a local variable to ensure Vite's 'define' replacement works correctly on the full string
+  const apiKey = process.env.API_KEY;
+
+  if (!apiKey) {
+    throw new Error("API Key 尚未設定。請確認環境變數 API_KEY (或 VITE_API_KEY) 是否正確。");
   }
   
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   try {
+    // 使用 gemini-2.0-flash-exp 作為備援，如果 gemini-3 不穩定
+    // 但根據指引我們優先使用 gemini-3-flash-preview
     const model = 'gemini-3-flash-preview';
     
+    console.log(`Starting search with model: ${model}`);
+
     // Construct the prompt parts
     const parts: any[] = [];
 
@@ -20,7 +25,7 @@ export const searchProduct = async (query: string, imageBase64?: string): Promis
     if (imageBase64) {
       parts.push({
         inlineData: {
-          mimeType: 'image/jpeg', // Assuming JPEG for simplicity from canvas/input, serves most cases
+          mimeType: 'image/jpeg',
           data: imageBase64
         }
       });
@@ -77,11 +82,28 @@ export const searchProduct = async (query: string, imageBase64?: string): Promis
       sources: sources
     };
 
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    if (error instanceof Error && error.message.includes("API Key")) {
-        throw error;
+  } catch (error: any) {
+    console.error("Gemini API Error Detail:", error);
+    
+    // 將完整的錯誤訊息拋出，以便在 UI 上顯示
+    // 這有助於判斷是 403 (Key 無效), 404 (模型找不到), 或是 500 (伺服器錯誤)
+    let errorMessage = "無法獲取產品數據";
+    
+    if (error instanceof Error) {
+        errorMessage = error.message;
+        // 如果錯誤訊息包含 JSON，嘗試美化它
+        try {
+            const errorObj = JSON.parse(errorMessage.match(/\{.*\}/)?.[0] || "{}");
+            if (errorObj.error?.message) {
+                errorMessage = errorObj.error.message;
+            }
+        } catch (e) {
+            // Ignore json parse error
+        }
+    } else if (typeof error === 'string') {
+        errorMessage = error;
     }
-    throw new Error("無法獲取產品數據，請稍後再試。");
+
+    throw new Error(`API 請求失敗: ${errorMessage}`);
   }
 };
