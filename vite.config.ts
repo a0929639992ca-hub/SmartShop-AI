@@ -11,8 +11,6 @@ export default defineConfig(({ mode }) => {
     define: {
       // Polyfill process.env.API_KEY so it works in the browser
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // Prevent crash if code accesses other process.env properties
-      'process.env': {}
     },
   };
 });
