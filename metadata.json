@@ -1,0 +1,8 @@
+{
+  "name": "SmartShop AI",
+  "description": "智能購物助手，結合 Google 搜尋與 Gemini 視覺辨識，提供即時比價與 PTT/Threads 評價分析。",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
