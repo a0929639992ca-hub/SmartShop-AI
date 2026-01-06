@@ -1,8 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { ProductAnalysisResult } from '../types';
 
-// 定義模型嘗試順序：優先使用 V3，若失敗 (如配額滿) 則嘗試 V2
-const MODELS_TO_TRY = ['gemini-3-flash-preview', 'gemini-2.0-flash-exp'];
+// 定義模型嘗試順序：
+// 1. gemini-3-flash-preview: 最新模型，效果最好，但額度較少。
+// 2. gemini-2.0-flash-exp: 備援預覽版。
+// 3. gemini-1.5-flash: 穩定版，額度高 (High Quota)，確保 App 不會因為預覽版額度滿而崩潰。
+const MODELS_TO_TRY = ['gemini-3-flash-preview', 'gemini-2.0-flash-exp', 'gemini-1.5-flash'];
 
 export const searchProduct = async (query: string, imageBase64?: string): Promise<ProductAnalysisResult> => {
   const apiKey = process.env.API_KEY;
@@ -112,7 +115,7 @@ export const searchProduct = async (query: string, imageBase64?: string): Promis
 
   // 翻譯常見的 Quota 錯誤，讓使用者更容易理解
   if (errorMessage.toLowerCase().includes("quota") || errorMessage.includes("429")) {
-      throw new Error("API 配額已額滿 (Rate Limit Exceeded)。請稍後再試，或檢查您的 Google AI Studio 方案是否已達上限。");
+      throw new Error("API 配額已額滿 (Rate Limit Exceeded)。系統已嘗試所有可用模型但皆繁忙，請稍後再試。");
   }
 
   throw new Error(`搜尋失敗: ${errorMessage}`);
